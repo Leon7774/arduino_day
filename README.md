@@ -1,36 +1,86 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Arduino Day — Event Check-In App
+
+A real-time QR code check-in system built for Arduino Day events. Staff scan guest QR codes using a phone or laptop camera, and the app verifies and records attendance against a PostgreSQL database.
+
+## Features
+
+- 📸 **Live QR Code Scanner** — Camera-based scanning powered by `@yudiel/react-qr-scanner`
+- ✅ **Instant Check-In** — Validates QR codes against a guest list and marks attendance in real time
+- 🚫 **Duplicate Prevention** — Prevents guests from checking in more than once
+- 🎨 **Polished UI** — Animated status feedback with Framer Motion and a glassmorphism design
+- 🛠️ **QR Code Generator** — CLI utility to generate QR code images for guest tickets
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router)
+- **Database:** PostgreSQL via Drizzle ORM
+- **Styling:** Tailwind CSS v4
+- **Animations:** Framer Motion
+- **Icons:** Lucide React
+
+## Environment Variables
+
+Create a `.env.local` file in the project root with the following:
+
+```env
+DATABASE_URL=postgresql://user:password@host:5432/database_name
+```
+
+This is the **only** env file needed. It is used by both the Next.js app and Drizzle Kit for migrations.
 
 ## Getting Started
 
-First, run the development server:
+### 1. Install Dependencies
+
+```bash
+npm install
+```
+
+### 2. Set Up the Database
+
+Create a `.env.local` file (see above), then push the schema to your database:
+
+```bash
+npx drizzle-kit push
+```
+
+Optionally, seed a test guest:
+
+```bash
+npx tsx seed.ts
+```
+
+### 3. Run the Dev Server
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) — you'll see the scanner interface ready to check in guests.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Generating QR Codes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Use the built-in CLI tool to generate QR code PNG images:
 
-## Learn More
+```bash
+npm run generate-qr
+```
 
-To learn more about Next.js, take a look at the following resources:
+This will prompt you to enter text (e.g. a guest's `qr_code_id`) and save the resulting PNG to the `qr-codes/` directory.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Project Structure
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+├── src/
+│   ├── app/
+│   │   ├── page.tsx            # Scanner UI (main page)
+│   │   └── api/check-in/       # POST endpoint for check-in logic
+│   └── db/
+│       ├── schema.ts           # Drizzle schema (guests table)
+│       └── index.ts            # Database connection
+├── scripts/
+│   └── generate-qr.ts         # QR code generator CLI
+├── seed.ts                     # Database seed script
+├── drizzle.config.ts           # Drizzle Kit configuration
+└── qr-codes/                   # Generated QR code images
+```
