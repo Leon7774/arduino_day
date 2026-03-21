@@ -1,65 +1,208 @@
-import Image from "next/image";
+"use client";
+
+import { useState } from "react";
+import { Scanner } from "@yudiel/react-qr-scanner";
+import { CheckCircle2, XCircle, Loader2, QrCode } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+
+type ScanStatus = "idle" | "scanning" | "success" | "error";
 
 export default function Home() {
+  const [status, setStatus] = useState<ScanStatus>("idle");
+  const [message, setMessage] = useState("");
+  const [guestName, setGuestName] = useState("");
+
+  const handleScan = async (result: string) => {
+    // Prevent multiple scans while processing
+    if (status !== "idle") return;
+    
+    setStatus("scanning");
+    setMessage("Verifying QR Code...");
+    
+    // Support if the QR code returns a full URL (e.g. http://arduino-day.com/test-qr-123)
+    let parsedId = result.trim();
+    try {
+      if (parsedId.startsWith("http://") || parsedId.startsWith("https://")) {
+        const url = new URL(parsedId);
+        
+        // Check for common query parameters first
+        const idFromQuery = url.searchParams.get("id") || url.searchParams.get("ticket") || url.searchParams.get("qr");
+        
+        if (idFromQuery) {
+          parsedId = idFromQuery;
+        } else {
+          const pathParts = url.pathname.split('/').filter(Boolean);
+          // Assuming the ID is the last part of the URL path
+          if (pathParts.length > 0) {
+            parsedId = pathParts[pathParts.length - 1];
+          }
+        }
+      }
+    } catch(e) { /* Ignore URL parse errors, fallback to raw result */ }
+
+    try {
+      const res = await fetch("/api/check-in", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ qrCodeId: parsedId, rawString: result }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        setStatus("success");
+        setGuestName(data.name);
+        setMessage("Checked in successfully!");
+        
+        // Reset after 3 seconds so they can scan the next person
+        setTimeout(() => {
+          setStatus("idle");
+          setGuestName("");
+          setMessage("");
+        }, 3000);
+      } else {
+        setStatus("error");
+        setMessage(data.error || "Invalid QR Code");
+        
+        // Reset error state quicker
+        setTimeout(() => {
+          setStatus("idle");
+          setMessage("");
+        }, 2000);
+      }
+    } catch (e) {
+      console.error(e);
+      setStatus("error");
+      setMessage("Network error. Please try again.");
+      setTimeout(() => setStatus("idle"), 2000);
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950">
+      
+      {/* Header */}
+      <div className="absolute top-8 left-8 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
+          <QrCode className="text-blue-400 w-6 h-6" />
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+        <div>
+          <h1 className="font-outfit font-bold text-xl tracking-wide text-white">ARDUINO DAY</h1>
+          <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">Registration Desk</p>
         </div>
-      </main>
-    </div>
+      </div>
+
+      <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        
+        {/* Left Side: Instructions / Status */}
+        <div className="flex flex-col gap-6 order-2 lg:order-1">
+          <div className="space-y-4">
+            <h2 className="text-4xl sm:text-5xl font-outfit font-bold leading-tight">
+              Welcome to <br/>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-300">
+                Arduino Day
+              </span>
+            </h2>
+            <p className="text-slate-400 text-lg max-w-md">
+              Please present your ticket QR code to the scanner to check in.
+            </p>
+          </div>
+
+          <AnimatePresence mode="wait">
+            {status === "idle" && (
+              <motion.div
+                key="idle"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="glass p-6 rounded-2xl flex items-center gap-4 border-white/5"
+              >
+                <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
+                <p className="text-slate-300 font-medium">Ready for next scan...</p>
+              </motion.div>
+            )}
+
+            {status === "scanning" && (
+              <motion.div
+                key="scanning"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="glass border-blue-500/30 bg-blue-500/10 p-6 rounded-2xl flex items-center gap-4"
+              >
+                <Loader2 className="w-6 h-6 text-blue-400 animate-spin" />
+                <p className="text-blue-100 font-medium text-lg">{message}</p>
+              </motion.div>
+            )}
+
+            {status === "success" && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="glass border-green-500/30 bg-green-500/10 p-8 rounded-2xl flex flex-col items-center justify-center gap-4 text-center"
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: "spring", bounce: 0.5 }}
+                >
+                  <CheckCircle2 className="w-16 h-16 text-green-400" />
+                </motion.div>
+                <div>
+                  <h3 className="text-3xl font-outfit font-bold text-white mb-2">{guestName}</h3>
+                  <p className="text-green-200 font-medium">{message}</p>
+                </div>
+              </motion.div>
+            )}
+
+            {status === "error" && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="glass border-red-500/30 bg-red-500/10 p-6 rounded-2xl flex items-center gap-4"
+              >
+                <XCircle className="w-8 h-8 text-red-400" />
+                <p className="text-red-100 font-medium text-lg">{message}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        {/* Right Side: Scanner Camera */}
+        <div className="order-1 lg:order-2">
+          <div className="relative aspect-square w-full max-w-[450px] mx-auto rounded-3xl overflow-hidden glass p-2 ring-1 ring-white/20 shadow-2xl shadow-blue-900/20">
+            {/* The scanner component container */}
+            <div className="w-full h-full rounded-2xl overflow-hidden relative bg-slate-900 [&_video]:scale-x-[-1]">
+               <Scanner
+                onScan={(result) => {
+                  if (result && result.length > 0) {
+                     handleScan(result[0].rawValue);
+                  }
+                }}
+                components={{
+                  onOff: true, // Show torch button
+                }}
+                styles={{
+                  container: {
+                    width: '100%',
+                    height: '100%',
+                  },
+                }}
+              />
+
+              {/* Scanner decorative overlay for cool vibes */}
+              <div className="absolute inset-0 border-2 border-blue-500/20 pointer-events-none rounded-2xl">
+                <div className="absolute top-1/2 left-0 w-full h-px bg-blue-500/50 shadow-[0_0_8px_2px_rgba(59,130,246,0.5)] animate-[scan_2s_ease-in-out_infinite] opacity-50" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
   );
 }
