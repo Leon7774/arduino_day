@@ -4,79 +4,14 @@ import { useState } from "react";
 import { Scanner } from "@yudiel/react-qr-scanner";
 import { CheckCircle2, XCircle, Loader2, QrCode } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { handleScan } from "@/utils/handleScan";
 
-type ScanStatus = "idle" | "scanning" | "success" | "error";
+export type ScanStatus = "idle" | "scanning" | "success" | "error";
 
 export default function Home() {
   const [status, setStatus] = useState<ScanStatus>("idle");
   const [message, setMessage] = useState("");
   const [guestName, setGuestName] = useState("");
-
-  const handleScan = async (result: string) => {
-    // Prevent multiple scans while processing
-    if (status !== "idle") return;
-    
-    setStatus("scanning");
-    setMessage("Verifying QR Code...");
-    
-    // Support if the QR code returns a full URL (e.g. http://arduino-day.com/test-qr-123)
-    let parsedId = result.trim();
-    try {
-      if (parsedId.startsWith("http://") || parsedId.startsWith("https://")) {
-        const url = new URL(parsedId);
-        
-        // Check for common query parameters first
-        const idFromQuery = url.searchParams.get("id") || url.searchParams.get("ticket") || url.searchParams.get("qr");
-        
-        if (idFromQuery) {
-          parsedId = idFromQuery;
-        } else {
-          const pathParts = url.pathname.split('/').filter(Boolean);
-          // Assuming the ID is the last part of the URL path
-          if (pathParts.length > 0) {
-            parsedId = pathParts[pathParts.length - 1];
-          }
-        }
-      }
-    } catch(e) { /* Ignore URL parse errors, fallback to raw result */ }
-
-    try {
-      const res = await fetch("/api/check-in", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ qrCodeId: parsedId, rawString: result }),
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        setStatus("success");
-        setGuestName(data.name);
-        setMessage("Checked in successfully!");
-        
-        // Reset after 3 seconds so they can scan the next person
-        setTimeout(() => {
-          setStatus("idle");
-          setGuestName("");
-          setMessage("");
-        }, 3000);
-      } else {
-        setStatus("error");
-        setMessage(data.error || "Invalid QR Code");
-        
-        // Reset error state quicker
-        setTimeout(() => {
-          setStatus("idle");
-          setMessage("");
-        }, 2000);
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus("error");
-      setMessage("Network error. Please try again.");
-      setTimeout(() => setStatus("idle"), 2000);
-    }
-  };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950">
@@ -180,7 +115,7 @@ export default function Home() {
                <Scanner
                 onScan={(result) => {
                   if (result && result.length > 0) {
-                     handleScan(result[0].rawValue);
+                     handleScan(status, result[0].rawValue, setStatus, setMessage, setGuestName);
                   }
                 }}
                 components={{
