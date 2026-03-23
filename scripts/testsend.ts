@@ -30,13 +30,12 @@ resend.emails.send({
                     <img src="cid:ticket-qr" alt="QR Code" style="width: 250px; height: 250px; border: 2px solid #eaeaea; border-radius: 8px; padding: 10px;" />
                   </div>
                   <p>Get ready to explore circuits, code, and creativity with fellow innovators. We can't wait to see you there!</p>
-                  <p>Stay charged,<br/>
-                  <a href="https://arduinoday.ph">Arduino Day Philippines</a><br/>
                   <p>If you have any concerns, feel free to reach out to any of the following:</p>
                   <ul>
                     <li>Leon Destura (Organizing Team) - <a href="mailto:galileon.destura@gmail.com">galileon.destura@gmail.com</a></li>
                     <li>Wakin Cean Maclang (Organizing Team) - <a href="mailto:maclangw26@gmail.com">maclangw26@gmail.com</a></li>
                   </ul>
+                  <p>See you there! 🚀</p>
                   <strong>The Organizing Team</strong></p>
                 </div>`
 });
