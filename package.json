@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "generate-qr": "tsx scripts/generate-qr.ts",
+    "send-emails": "tsx --env-file=.env.local scripts/sendEmails.ts",
+    "sync-db": "tsx --env-file=.env.local scripts/syncSupabase.ts",
     "test": "vitest"
   },
   "dependencies": {
