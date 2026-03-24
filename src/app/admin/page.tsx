@@ -156,7 +156,7 @@ export default function AdminPage() {
                 </p>
                 <p className="text-xs text-slate-500">
                   {!syncAvailable
-                    ? "Not configured — add SUPABASE_URL & SUPABASE_ANON_KEY"
+                    ? "Not configured — add DATABASE_URL to .env.local"
                     : syncEnabled
                       ? "Connected to Supabase"
                       : "Disabled"}
@@ -220,18 +220,9 @@ export default function AdminPage() {
         </motion.div>
 
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
-              <img
-                src="/muse.jpg"
-                alt="Logo"
-                className="w-full h-full object-cover"
-              />
-            </div>
-            <div>
-              <h1 className="text-3xl font-outfit font-bold ">Admin Dashboard</h1>
-              <p className="text-slate-400 mt-1">Manual participant management</p>
-            </div>
+          <div>
+            <h1 className="text-3xl font-outfit font-bold ">Admin Dashboard</h1>
+            <p className="text-slate-400 mt-1">Manual participant management</p>
           </div>
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />

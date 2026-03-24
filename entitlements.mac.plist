@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <!-- Required for camera access in hardened runtime -->
+    <key>com.apple.security.device.camera</key>
+    <true/>
+
+    <!-- Required for microphone if you use audio -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+
+    <!-- Required to run JIT-compiled code (Next.js / V8) -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+
+    <!-- Required for Node.js / Electron internals -->
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+
+    <!-- Allows loading unsigned dylibs (native node modules) -->
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+  </dict>
+</plist>
