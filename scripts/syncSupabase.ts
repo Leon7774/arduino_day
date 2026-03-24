@@ -106,22 +106,22 @@ async function main() {
     }
 
     // Delete SQLite records not in the sheet anymore
-    const allLocal = await db
-      .select({ id: guests.id, email: guests.email })
-      .from(guests)
-      .all();
-    let removed = 0;
-    for (const local of allLocal) {
-      if (!validEmails.has(local.email)) {
-        await db.delete(guests).where(eq(guests.id, local.id));
-        removed++;
-      }
-    }
+    // const allLocal = await db
+    //   .select({ id: guests.id, email: guests.email })
+    //   .from(guests)
+    //   .all();
+    // let removed = 0;
+    // for (const local of allLocal) {
+    //   if (!validEmails.has(local.email)) {
+    //     await db.delete(guests).where(eq(guests.id, local.id));
+    //     removed++;
+    //   }
+    // }
 
     console.log(`\n✅ Sync finished successfully!`);
     console.log(`- Supabase: ${supabaseSynced} synced`);
     console.log(`- SQLite:   ${sqliteSynced} synced`);
-    console.log(`- Removed:  ${removed} stale SQLite records`);
+    // console.log(`- Removed:  ${removed} stale SQLite records`);
     console.log(`- Skipped:  ${skippedCount} (missing email or name)`);
 
     await sql.end();

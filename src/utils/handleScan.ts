@@ -9,9 +9,11 @@ export async function handleScan(
   setGuestName: (name: string) => void,
 ) {
   // Prevent multiple scans while processing
-  if (status !== "idle") return;
-
-  console.log("Scan result:", result);
+  console.log("🔍 [Frontend] handleScan triggered with:", result);
+  if (status !== "idle") {
+    console.log("⚠️ [Frontend] Scan ignored because status is:", status);
+    return;
+  }
 
   setStatus("scanning");
   setMessage("Verifying QR Code...");
@@ -42,6 +44,7 @@ export async function handleScan(
     /* Ignore URL parse errors, fallback to raw result */
   }
 
+  console.log("🌐 [Frontend] Pinging /api/check-in with ID:", parsedId);
   try {
     const res = await fetch("/api/check-in", {
       method: "POST",
