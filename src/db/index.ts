@@ -1,16 +1,11 @@
-import { drizzle } from 'drizzle-orm/postgres-js';
-import postgres from 'postgres';
+import { drizzle } from 'drizzle-orm/libsql';
+import { createClient } from '@libsql/client';
 import * as schema from './schema';
 import dotenv from 'dotenv';
+import path from 'path';
 
 dotenv.config({ path: '.env.local' });
 
-const connectionString = process.env.DATABASE_URL;
-
-if (!connectionString) {
-  throw new Error("DATABASE_URL is not set");
-}
-
-// Disable prefetch as it is not supported for "Transaction" pool mode
-const client = postgres(connectionString, { prepare: false });
-export const db = drizzle({ client, schema });
+// We use file: prefix for local sqlite with libsql
+const client = createClient({ url: 'file:sqlite.db' });
+export const db = drizzle(client, { schema });

@@ -1,11 +1,11 @@
-import { pgTable, serial, text, boolean, timestamp } from "drizzle-orm/pg-core";
+import { sqliteTable, integer, text } from "drizzle-orm/sqlite-core";
 
-export const guests = pgTable("guests", {
-  id: serial("id").primaryKey(),
+export const guests = sqliteTable("guests", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   qr_code_id: text("qr_code_id").notNull().unique(),
-  is_checked_in: boolean("is_checked_in").default(false).notNull(),
-  checked_in_at: timestamp("checked_in_at"),
-  email_sent: boolean("email_sent").default(false).notNull(),
+  is_checked_in: integer("is_checked_in", { mode: 'boolean' }).default(false).notNull(),
+  checked_in_at: integer("checked_in_at", { mode: 'timestamp' }),
+  email_sent: integer("email_sent", { mode: 'boolean' }).default(false).notNull(),
 });
