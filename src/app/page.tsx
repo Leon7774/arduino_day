@@ -15,25 +15,27 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950">
-      
       {/* Header */}
       <div className="absolute top-8 left-8 flex items-center gap-3">
         <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30">
           <QrCode className="text-blue-400 w-6 h-6" />
         </div>
         <div>
-          <h1 className="font-outfit font-bold text-xl tracking-wide text-white">ARDUINO DAY</h1>
-          <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">Registration Desk</p>
+          <h1 className="font-outfit font-bold text-xl tracking-wide text-white">
+            ARDUINO DAY
+          </h1>
+          <p className="text-xs text-slate-400 font-medium tracking-widest uppercase">
+            Registration Desk
+          </p>
         </div>
       </div>
 
       <div className="w-full max-w-5xl grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center">
-        
         {/* Left Side: Instructions / Status */}
         <div className="flex flex-col gap-6 order-2 lg:order-1">
           <div className="space-y-4">
             <h2 className="text-4xl sm:text-5xl font-outfit font-bold leading-tight">
-              Welcome to <br/>
+              Welcome to <br />
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-teal-300">
                 Arduino Day
               </span>
@@ -53,7 +55,9 @@ export default function Home() {
                 className="glass p-6 rounded-2xl flex items-center gap-4 border-white/5"
               >
                 <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
-                <p className="text-slate-300 font-medium">Ready for next scan...</p>
+                <p className="text-slate-300 font-medium">
+                  Ready for next scan...
+                </p>
               </motion.div>
             )}
 
@@ -86,7 +90,9 @@ export default function Home() {
                   <CheckCircle2 className="w-16 h-16 text-green-400" />
                 </motion.div>
                 <div>
-                  <h3 className="text-3xl font-outfit font-bold text-white mb-2">{guestName}</h3>
+                  <h3 className="text-3xl font-outfit font-bold text-white mb-2">
+                    {guestName}
+                  </h3>
                   <p className="text-green-200 font-medium">{message}</p>
                 </div>
               </motion.div>
@@ -112,10 +118,16 @@ export default function Home() {
           <div className="relative aspect-square w-full max-w-[450px] mx-auto rounded-3xl overflow-hidden glass p-2 ring-1 ring-white/20 shadow-2xl shadow-blue-900/20">
             {/* The scanner component container */}
             <div className="w-full h-full rounded-2xl overflow-hidden relative bg-slate-900 [&_video]:scale-x-[-1]">
-               <Scanner
+              <Scanner
                 onScan={(result) => {
                   if (result && result.length > 0) {
-                     handleScan(status, result[0].rawValue, setStatus, setMessage, setGuestName);
+                    handleScan(
+                      status,
+                      result[0].rawValue,
+                      setStatus,
+                      setMessage,
+                      setGuestName,
+                    );
                   }
                 }}
                 components={{
@@ -123,8 +135,8 @@ export default function Home() {
                 }}
                 styles={{
                   container: {
-                    width: '100%',
-                    height: '100%',
+                    width: "100%",
+                    height: "100%",
                   },
                 }}
               />
@@ -136,7 +148,6 @@ export default function Home() {
             </div>
           </div>
         </div>
-
       </div>
     </main>
   );

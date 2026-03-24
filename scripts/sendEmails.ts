@@ -1,35 +1,54 @@
-import * as QRCode from 'qrcode';
-import { Resend } from 'resend';
-import dotenv from 'dotenv';
-import { db } from '../src/db';
-import { guests } from '../src/db/schema';
-import { eq } from 'drizzle-orm';
+import * as QRCode from "qrcode";
+import nodemailer from "nodemailer";
+import dotenv from "dotenv";
+import { db } from "../src/db";
+import { guests } from "../src/db/schema";
+import { eq } from "drizzle-orm";
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
 
-const resend = new Resend(process.env.RESEND_API_KEY!);
+if (!process.env.GMAIL_USER || !process.env.GMAIL_APP_PASSWORD) {
+  console.error(
+    "❌ Missing Gmail credentials in .env.local (GMAIL_USER, GMAIL_APP_PASSWORD)",
+  );
+  process.exit(1);
+}
 
-const chunkArray = (arr: any[], size: number) => 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.GMAIL_USER,
+    pass: process.env.GMAIL_APP_PASSWORD,
+  },
+});
+
+const chunkArray = (arr: any[], size: number) =>
   Array.from({ length: Math.ceil(arr.length / size) }, (v, i) =>
-    arr.slice(i * size, i * size + size)
+    arr.slice(i * size, i * size + size),
   );
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-const IS_DRY_RUN = process.env.DRY_RUN === 'true';
+const IS_DRY_RUN = process.env.DRY_RUN === "true";
 
 async function main() {
-  if (IS_DRY_RUN) console.log('⚠️ RUNNING IN DRY-RUN MODE. NO EMAILS WILL BE SENT. ⚠️\n');
+  if (IS_DRY_RUN)
+    console.log("⚠️ RUNNING IN DRY-RUN MODE. NO EMAILS WILL BE SENT. ⚠️\n");
 
   try {
-    const pendingGuests = await db.select().from(guests).where(eq(guests.email_sent, false));
+    const pendingGuests = await db
+      .select()
+      .from(guests)
+      .where(eq(guests.email_sent, false));
 
     if (!pendingGuests || pendingGuests.length === 0) {
-      console.log('No participants waiting for tickets. Pack it up.');
+      console.log("No participants waiting for tickets. Pack it up.");
       process.exit(0);
     }
 
-    console.log(`Found ${pendingGuests.length} participants waiting for tickets.\n`);
+    console.log(
+      `Found ${pendingGuests.length} participants waiting for tickets.\n`,
+    );
 
     const batches = chunkArray(pendingGuests, 50);
 
@@ -39,25 +58,29 @@ async function main() {
         const fullName = guest.name;
 
         if (!email) {
-          console.log(`[WARNING] Skipping Guest ID ${guest.id}: No email found.`);
+          console.log(
+            `[WARNING] Skipping Guest ID ${guest.id}: No email found.`,
+          );
           return;
         }
 
         try {
           // 1. Generate local QR for the email attachment
           const qrCodeDataURI = await QRCode.toDataURL(email, {
-            errorCorrectionLevel: 'H',
+            errorCorrectionLevel: "H",
             margin: 2,
-            width: 500
+            width: 500,
           });
-          const base64Data = qrCodeDataURI.split(',')[1];
+          const base64Data = qrCodeDataURI.split(",")[1];
 
           if (IS_DRY_RUN) {
-            console.log(`[DRY RUN] Would email: ${email} | Would update guests set email_sent=true for ID ${guest.id}`);
+            console.log(
+              `[DRY RUN] Would email: ${email} | Would update guests set email_sent=true for ID ${guest.id}`,
+            );
           } else {
-            // Send via Resend
-            const result = await resend.emails.send({
-              from: 'Arduino Day <arduinoday-noreply@destura.me>', 
+            // Send via Nodemailer
+            await transporter.sendMail({
+              from: '"Arduino Day" <arduinoday-noreply@destura.me>',
               to: email,
               subject: `Your Ticket to Arduino Day Philippines 2026!`,
               html: `
@@ -84,55 +107,55 @@ async function main() {
                   <a href="https://arduinoday.ph">Arduino Day Philippines</a><br/>
                   <p>If you have any concerns, feel free to reach out to any of the following:</p>
                   <ul>
-                    <li><a href="mailto:galileon.destura@gmail.com">galileon.destura@gmail.com</a></li>
-                    <li><a href="mailto:maclangw26@gmail.com">maclangw26@gmail.com</a></li>
+                    <li>Leon Destura | <a href="mailto:galileon.destura@gmail.com">galileon.destura@gmail.com</a></li>
+                    <li>Wakin Maclang | <a href="mailto:maclangw26@gmail.com">maclangw26@gmail.com</a></li>
                   </ul>
                   <strong>The Organizing Team</strong></p>
                 </div>
               `,
               attachments: [
                 {
-                  filename: `ticket-${fullName.replace(/\s+/g, '-')}.png`,
+                  filename: `ticket-${fullName.replace(/\s+/g, "-")}.png`,
                   content: base64Data,
+                  encoding: "base64",
                 },
                 {
                   filename: `qr-inline.png`,
                   content: base64Data,
-                  contentId: 'ticket-qr',
-                }
+                  encoding: "base64",
+                  cid: "ticket-qr",
+                },
               ],
             });
 
-            if(result.error){
-              console.error(`❌ Failed processing ${email} (Guest ID ${guest.id}):`, result.error);
-              return;
-            } else {
-              console.log(`✅ Ticket delivered to ${email}`);
-            }
+            console.log(`✅ Ticket delivered to ${email}`);
 
             // Update email_sent to true in Supabase via Drizzle!
-            await db.update(guests)
+            await db
+              .update(guests)
               .set({ email_sent: true })
               .where(eq(guests.id, guest.id));
           }
         } catch (err) {
-          console.error(`❌ Failed processing ${email} (Guest ID ${guest.id}):`, err);
+          console.error(
+            `❌ Failed processing ${email} (Guest ID ${guest.id}):`,
+            err,
+          );
         }
       });
 
       await Promise.all(emailPromises);
-      
+
       if (!IS_DRY_RUN) {
-        console.log('Batch complete, pausing to avoid rate limits...');
-        await sleep(2000); 
+        console.log("Batch complete, pausing to avoid rate limits...");
+        await sleep(2000);
       }
     }
 
-    console.log('\nExecution finished.');
+    console.log("\nExecution finished.");
     process.exit(0);
-
   } catch (error) {
-    console.error('The script violently crashed:', error);
+    console.error("The script violently crashed:", error);
     process.exit(1);
   }
 }
