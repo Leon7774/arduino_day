@@ -71,12 +71,11 @@
     "asar": true,
     "extraResources": [
       {
-        "from": ".env",
-        "to": ".env"
-      },
-      {
         "from": ".env.local",
-        "to": ".env.local"
+        "to": ".env.local",
+        "filter": [
+          "**/*"
+        ]
       }
     ],
     "mac": {

@@ -8,9 +8,17 @@ dotenv.config({ path: ".env.local" });
 
 // We use an absolute path so that Next.js consistently finds the right database file
 // In an Electron production package, SQLITE_DB_PATH points to a writable user directory.
+const isVercel = process.env.VERCEL === "1";
 const dbPath =
-  process.env.SQLITE_DB_PATH || path.join(process.cwd(), "sqlite.db");
-const client = createClient({ url: `file:${dbPath}` });
+  process.env.SQLITE_DB_PATH ||
+  (isVercel ? "/tmp/sqlite.db" : path.join(process.cwd(), "sqlite.db"));
+
+// If URL is provided (e.g. for Turso), use it. Otherwise use the local file.
+const url = process.env.LIBSQL_URL || `file:${dbPath}`;
+const client = createClient({
+  url,
+  authToken: process.env.LIBSQL_AUTH_TOKEN,
+});
 
 // Auto-create the guests table if it doesn't exist (critical for Electron where drizzle-kit push isn't available)
 client.execute(`
