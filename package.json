@@ -10,10 +10,15 @@
     "generate-qr": "tsx scripts/generate-qr.ts",
     "send-emails": "tsx --env-file=.env.local scripts/sendEmails.ts",
     "sync-db": "tsx --env-file=.env.local scripts/syncSupabase.ts",
-    "test": "vitest"
+    "test": "vitest",
+    "electron:dev": "cross-env NODE_ENV=development electron .",
+    "electron:start": "cross-env NODE_ENV=production electron .",
+    "electron:pack:mac": "ulimit -n 10240 && npm run build && electron-builder --mac",
+    "electron:pack:win": "ulimit -n 10240 && npm run build && electron-builder --win"
   },
   "dependencies": {
     "@libsql/client": "^0.17.2",
+    "@supabase/supabase-js": "^2.100.0",
     "@yudiel/react-qr-scanner": "^2.5.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -23,6 +28,7 @@
     "lucide-react": "^0.577.0",
     "next": "16.1.7",
     "nodemailer": "^8.0.3",
+    "postgres": "^3.4.8",
     "radix-ui": "^1.4.3",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -39,8 +45,12 @@
     "@types/qrcode-terminal": "^0.12.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.3.1",
     "drizzle-kit": "^0.31.10",
+    "electron": "^41.0.3",
+    "electron-builder": "^26.8.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.7",
     "qrcode": "^1.5.4",
@@ -48,6 +58,32 @@
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "wait-on": "^9.0.4"
+  },
+  "main": "main.js",
+  "build": {
+    "appId": "com.arduinoday.app",
+    "productName": "Arduino Day Tracker",
+    "directories": {
+      "output": "dist"
+    },
+    "asar": true,
+    "mac": {
+      "target": [
+        "dmg"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "files": [
+      "**/*",
+      "!**/.next/cache",
+      "!**/.next/dev",
+      "!**/node_modules/.cache"
+    ]
   }
 }

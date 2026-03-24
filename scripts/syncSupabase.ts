@@ -1,79 +1,126 @@
-import { google } from 'googleapis';
-import { db } from '../src/db';
-import { guests } from '../src/db/schema';
-import dotenv from 'dotenv';
+import { google } from "googleapis";
+import postgres from "postgres";
+import crypto from "crypto";
+import { db } from "../src/db";
+import { guests } from "../src/db/schema";
+import { eq } from "drizzle-orm";
+import dotenv from "dotenv";
 
-dotenv.config({ path: '.env.local' });
+dotenv.config({ path: ".env.local" });
+
+const sql = postgres(process.env.DATABASE_URL!);
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: './service-account.json',
-  scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  keyFile: "./service-account.json",
+  scopes: ["https://www.googleapis.com/auth/spreadsheets"],
 });
 
-const sheets = google.sheets({ version: 'v4', auth });
+const sheets = google.sheets({ version: "v4", auth });
 
 async function main() {
-  console.log('🔄 Starting Google Sheets to Supabase sync...');
+  console.log("🔄 Starting Google Sheets → Supabase + SQLite sync...");
 
   try {
     const spreadsheetId = process.env.SHEET_ID;
-    const sheetName = process.env.SHEET_NAME || 'Sheet1';
+    const sheetName = process.env.SHEET_NAME || "Sheet2";
 
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: `'${sheetName}'!A2:E1001`, // Grabbing Name and Email
+      range: `'${sheetName}'!A2:E1001`,
     });
 
     const rows = response.data.values;
     if (!rows || rows.length === 0) {
-      console.log('Sheet is empty. Nothing to sync.');
+      console.log("Sheet is empty. Nothing to sync.");
       process.exit(0);
     }
 
     console.log(`Found ${rows.length} total rows in Sheet. Processing...`);
 
-    let syncedCount = 0;
+    let supabaseSynced = 0;
+    let sqliteSynced = 0;
     let skippedCount = 0;
+
+    const toTitleCase = (str: string) =>
+      str.toLowerCase().replace(/\b\w/g, (c) => c.toUpperCase());
 
     for (let i = 0; i < rows.length; i++) {
       const row = rows[i];
-      const fullName = row[1]?.trim();
+      const rawName = row[1]?.trim();
       const email = row[2]?.trim().toLowerCase();
+      const fullName = rawName ? toTitleCase(rawName) : "";
 
       if (!email || !fullName) {
         skippedCount++;
         continue;
       }
 
+      const qrId = crypto.randomUUID();
+
+      // Supabase (PostgreSQL)
       try {
-        await db.insert(guests)
+        await sql`
+          INSERT INTO guests (name, email, qr_code_id)
+          VALUES (${fullName}, ${email}, ${qrId})
+          ON CONFLICT (email) DO UPDATE SET
+            name = ${fullName}
+        `;
+        supabaseSynced++;
+      } catch (dbError) {
+        console.error(`❌ Supabase failed for ${email}:`, dbError);
+      }
+
+      // Local SQLite
+      try {
+        await db
+          .insert(guests)
           .values({
             name: fullName,
             email: email,
-            qr_code_id: email, // Setting the qr code content directly to email to match the attachments
+            qr_code_id: qrId,
           })
           .onConflictDoUpdate({
             target: guests.email,
             set: {
               name: fullName,
-              qr_code_id: email, // Update in case they changed spelling
             },
           });
-        
-        syncedCount++;
+        sqliteSynced++;
       } catch (dbError) {
-        console.error(`❌ Failed inserting/upserting ${email}:`, dbError);
+        console.error(`❌ SQLite failed for ${email}:`, dbError);
+      }
+    }
+    // Collect all valid emails from the sheet
+    const validEmails = new Set<string>();
+    for (const row of rows) {
+      const email = row[2]?.trim().toLowerCase();
+      if (email) validEmails.add(email);
+    }
+
+    // Delete SQLite records not in the sheet anymore
+    const allLocal = await db
+      .select({ id: guests.id, email: guests.email })
+      .from(guests)
+      .all();
+    let removed = 0;
+    for (const local of allLocal) {
+      if (!validEmails.has(local.email)) {
+        await db.delete(guests).where(eq(guests.id, local.id));
+        removed++;
       }
     }
 
     console.log(`\n✅ Sync finished successfully!`);
-    console.log(`- Synced: ${syncedCount} participants`);
-    console.log(`- Skipped: ${skippedCount} (missing email or name)`);
+    console.log(`- Supabase: ${supabaseSynced} synced`);
+    console.log(`- SQLite:   ${sqliteSynced} synced`);
+    console.log(`- Removed:  ${removed} stale SQLite records`);
+    console.log(`- Skipped:  ${skippedCount} (missing email or name)`);
 
+    await sql.end();
     process.exit(0);
-
   } catch (error) {
-    console.error('The sync script violently crashed:', error);
+    console.error("The sync script violently crashed:", error);
+    await sql.end();
     process.exit(1);
   }
 }

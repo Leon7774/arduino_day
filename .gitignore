@@ -43,3 +43,10 @@ next-env.d.ts
 /qr-codes/
 
 service-account.json
+
+#dist
+/dist/
+
+/win/
+
+/mac/

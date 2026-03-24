@@ -6,6 +6,7 @@ export type Guest = Awaited<ReturnType<typeof getGuests>>["guests"][0];
 export function useGuests() {
   const [guests, setGuests] = useState<Guest[]>([]);
   const [total, setTotal] = useState(0);
+  const [totalCheckedIn, setTotalCheckedIn] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
 
@@ -17,6 +18,7 @@ export function useGuests() {
       const data = await getGuests(query, p, 20); // 20 items per page
       setGuests(data.guests);
       setTotal(data.total);
+      setTotalCheckedIn(data.totalCheckedIn);
       setTotalPages(data.totalPages || 1);
     },
     [search, page],
@@ -42,6 +44,7 @@ export function useGuests() {
   return {
     guests,
     total,
+    totalCheckedIn,
     totalPages,
     page,
     setPage,

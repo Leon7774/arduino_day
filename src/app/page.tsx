@@ -24,8 +24,12 @@ export default function Home() {
     <main className="flex min-h-screen flex-col items-center justify-center p-4 sm:p-8 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-blue-900/20 via-slate-950 to-slate-950">
       {/* Header */}
       <div className="absolute top-8 left-8 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
-          <QrCode className="text-blue-400 w-6 h-6" />
+        <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+          <img
+            src="/muse.jpg"
+            alt="Logo"
+            className="w-full h-full object-cover"
+          />
         </div>
         <div>
           <h1 className="font-outfit font-bold text-xl tracking-wide text-white drop-shadow-md">

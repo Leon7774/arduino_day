@@ -1,7 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toggleCheckIn, updateGuest } from "./actions";
+import {
+  pullFromSupabase,
+  pushToSupabase,
+  getSyncStatus,
+} from "./sync-actions";
 import { useGuests, type Guest } from "./useGuests";
 import {
   CheckCircle2,
@@ -12,6 +17,11 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
+  Cloud,
+  CloudOff,
+  Download,
+  Upload,
+  Loader2,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { redirect } from "next/navigation";
@@ -20,6 +30,7 @@ export default function AdminPage() {
   const {
     guests,
     total,
+    totalCheckedIn,
     totalPages,
     page,
     setPage,
@@ -32,6 +43,51 @@ export default function AdminPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
+
+  // Sync state
+  const [syncEnabled, setSyncEnabled] = useState(false);
+  const [syncAvailable, setSyncAvailable] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncMessage, setSyncMessage] = useState("");
+
+  useEffect(() => {
+    // Check if Supabase is configured
+    getSyncStatus().then((status) => setSyncAvailable(status.available));
+    // Restore toggle from localStorage
+    const saved = localStorage.getItem("syncEnabled");
+    if (saved === "true") setSyncEnabled(true);
+  }, []);
+
+  const toggleSync = () => {
+    const next = !syncEnabled;
+    setSyncEnabled(next);
+    localStorage.setItem("syncEnabled", String(next));
+  };
+
+  const handlePull = async () => {
+    setSyncing(true);
+    setSyncMessage("");
+    const res = await pullFromSupabase();
+    setSyncMessage(
+      res.success
+        ? res.message || "Pull complete!"
+        : res.error || "Pull failed.",
+    );
+    setSyncing(false);
+    if (res.success) await fetchGuests();
+  };
+
+  const handlePush = async () => {
+    setSyncing(true);
+    setSyncMessage("");
+    const res = await pushToSupabase();
+    setSyncMessage(
+      res.success
+        ? res.message || "Push complete!"
+        : res.error || "Push failed.",
+    );
+    setSyncing(false);
+  };
 
   const handleToggleCheckIn = async (guest: Guest) => {
     const res = await toggleCheckIn(guest.id, guest.is_checked_in);
@@ -80,10 +136,102 @@ export default function AdminPage() {
             Back to Scanner
           </button>
         </div>
+
+        {/* Cloud Sync Panel */}
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="glass rounded-2xl border border-white/5 p-4 shadow-xl"
+        >
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              {syncEnabled && syncAvailable ? (
+                <Cloud className="w-5 h-5 text-blue-400" />
+              ) : (
+                <CloudOff className="w-5 h-5 text-slate-500" />
+              )}
+              <div>
+                <p className="text-sm font-semibold text-slate-200">
+                  Cloud Sync
+                </p>
+                <p className="text-xs text-slate-500">
+                  {!syncAvailable
+                    ? "Not configured — add SUPABASE_URL & SUPABASE_ANON_KEY"
+                    : syncEnabled
+                      ? "Connected to Supabase"
+                      : "Disabled"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Toggle */}
+              <button
+                onClick={toggleSync}
+                disabled={!syncAvailable}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 ${
+                  syncEnabled ? "bg-blue-500" : "bg-slate-700"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    syncEnabled ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+
+              {syncEnabled && syncAvailable && (
+                <>
+                  <button
+                    onClick={handlePull}
+                    disabled={syncing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 border border-blue-500/30 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+                  >
+                    {syncing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Download className="w-3 h-3" />
+                    )}
+                    Pull
+                  </button>
+                  <button
+                    onClick={handlePush}
+                    disabled={syncing}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 border border-emerald-500/30 rounded-xl text-xs font-semibold transition-all disabled:opacity-50"
+                  >
+                    {syncing ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <Upload className="w-3 h-3" />
+                    )}
+                    Push
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          {syncMessage && (
+            <p
+              className={`mt-2 text-xs ${syncMessage.includes("fail") || syncMessage.includes("not configured") ? "text-red-400" : "text-green-400"}`}
+            >
+              {syncMessage}
+            </p>
+          )}
+        </motion.div>
+
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-3xl font-outfit font-bold ">Admin Dashboard</h1>
-            <p className="text-slate-400 mt-1">Manual participant management</p>
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl overflow-hidden border border-white/10 shadow-[0_0_15px_rgba(59,130,246,0.1)]">
+              <img
+                src="/muse.jpg"
+                alt="Logo"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <h1 className="text-3xl font-outfit font-bold ">Admin Dashboard</h1>
+              <p className="text-slate-400 mt-1">Manual participant management</p>
+            </div>
           </div>
           <div className="relative w-full sm:w-80">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
@@ -110,6 +258,9 @@ export default function AdminPage() {
                   </th>
                   <th className="p-4 font-semibold text-slate-300 text-sm uppercase tracking-wider">
                     Email
+                  </th>
+                  <th className="p-4 font-semibold text-slate-300 text-sm uppercase tracking-wider">
+                    In Time
                   </th>
                   <th className="p-4 font-semibold text-slate-300 text-sm uppercase tracking-wider text-right">
                     Actions
@@ -188,6 +339,11 @@ export default function AdminPage() {
                             </span>
                           )}
                         </td>
+                        <td className="p-4">
+                          <span className="font-semibold text-slate-100">
+                            {guest.checked_in_at?.toLocaleTimeString()}
+                          </span>
+                        </td>
                         <td className="p-4 text-right">
                           <div className="flex justify-end gap-2">
                             {isEditing ? (
@@ -256,10 +412,8 @@ export default function AdminPage() {
 
             <div>
               Checked In:{" "}
-              <strong className="text-green-400">
-                {guests.filter((g) => g.is_checked_in).length}
-              </strong>{" "}
-              on this page
+              <strong className="text-green-400">{totalCheckedIn}</strong> /{" "}
+              {total} total
             </div>
           </div>
         </div>
